@@ -1,0 +1,27 @@
+/* Custom overrides for 98.css table styling */
+table>tbody>tr>* {
+    padding: 4px 12px;
+}
+
+table>thead>tr>* {
+    padding: 6px;
+    font-size: 12px;
+}
+
+/* Alternating row styling for all tables */
+table.table tbody tr:nth-child(even) {
+    background-color: #ffffe0 !important;
+}
+
+/* Override for specific tables if needed */
+table.table-no-stripe tbody tr:nth-child(even) {
+    background-color: inherit !important;
+}
+
+/* button, */
+/* input[type=reset], */
+/* input[type=submit] { */
+.delete-expense-button {
+    min-width: 35px;
+    opacity: 0.5;
+}
