@@ -69,7 +69,7 @@ export const DataGroupSelector: React.FC<DataGroupSelectorProps> = ({
                 onChange={(value) => onSelectDataGroup(Number(value))}
                 options={groups.map((group) => ({
                     value: group.id,
-                    label: `${group.name} (${group.group_type})`,
+                    label: `${group.name} (${group.type})`,
                 }))}
                 style={{
                     padding: '6px 12px',

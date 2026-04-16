@@ -93,10 +93,10 @@ export const ApplicationReportCard: React.FC<ApplicationReportCardProps> = ({
                     <button
                         onClick={() => onEdit({
                             id: summary.application,
-                            data_group_id: 0,
+                            data_group: 0,
                             name: summary.application_name,
                             amount: summary.target_amount || 0,
-                            date_created: '',
+                            created_at: '',
                             submission_deadline: null,
                         })}
                         style={{

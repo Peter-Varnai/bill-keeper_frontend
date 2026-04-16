@@ -24,7 +24,7 @@ export const useCreateApplicationReport = () => {
       name: string;
       amount: number;
       submission_deadline?: string;
-      group_id: number;
+      data_group: number;
     }) => createApplicationReport(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [APPLICATION_REPORTS_KEY] });

@@ -12,19 +12,19 @@ import { EXPENSE_TYPES } from '../api/types';
 import type { Summary, ReportItem, EarResponse, Expense, ApplicationReport } from '../api/types';
 
 interface DashboardViewProps {
-  dataGroupId: number;
+    dataGroupId: number;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => {
     const { data: summaries, isLoading, error } = useSummaries(dataGroupId);
     const { data: applicationReports, isLoading: isLoadingApps } = useApplicationReports(dataGroupId);
-    
+
     const [activeReportAppId, setActiveReportAppId] = useState<number | null>(null);
     const [activeReportType, setActiveReportType] = useState<'application' | 'ear' | null>(null);
     const [expandedSummary, setExpandedSummary] = useState<number | null>(null);
     const [mandatoryTab, setMandatoryTab] = useState<'ear' | 'assets'>('ear');
     const [earExpanded, setEarExpanded] = useState(false);
-    
+
     // Edit/Create modal state
     const [showEditModal, setShowEditModal] = useState(false);
     const [editingAppReport, setEditingAppReport] = useState<ApplicationReport | null>(null);
@@ -105,14 +105,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
     const getEarDetails = () => {
         if (!earQuery.data) return { incomes: [], expenses: [] };
         const { expenses } = earQuery.data;
-        
+
         const incomesMap = new Map<string, number>();
         const expensesMap = new Map<string, number>();
-        
+
         expenses.forEach((expense) => {
             const type = EXPENSE_TYPES[expense.expense_type] || 'Unknown';
-            const amount = expense.amount;
-            
+            const amount = Number(expense.amount);
+
             if (expense.expense_type >= 50 && expense.expense_type <= 56) {
                 const current = incomesMap.get(type) || 0;
                 incomesMap.set(type, current + amount);
@@ -121,15 +121,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
                 expensesMap.set(type, current + amount);
             }
         });
-        
+
         const incomes = Array.from(incomesMap.entries())
             .map(([type, amount]) => [type, amount.toFixed(2)] as [string, string])
             .sort((a, b) => parseFloat(b[1]) - parseFloat(a[1]));
-            
+
         const expensesArr = Array.from(expensesMap.entries())
             .map(([type, amount]) => [type, Math.abs(amount).toFixed(2)] as [string, string])
             .sort((a, b) => parseFloat(b[1]) - parseFloat(a[1]));
-        
+
         return { incomes, expenses: expensesArr };
     };
 
@@ -200,10 +200,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
                                             <td>{expense.date || ''}</td>
                                             <td>{expense.partner}</td>
                                             <td style={{ textAlign: 'right' }}>
-                                                {!expense.Bargeldabhebung ? expense.amount.toFixed(2) : ''}
+                                                {!expense.is_cash ? parseFloat(String(expense.amount)).toFixed(2) : ''}
                                             </td>
                                             <td style={{ textAlign: 'right' }}>
-                                                {expense.Bargeldabhebung ? expense.amount.toFixed(2) : ''}
+                                                {expense.is_cash ? parseFloat(String(expense.amount)).toFixed(2) : ''}
                                             </td>
                                             <td>{EXPENSE_TYPES[expense.expense_type] || ''}</td>
                                         </tr>
@@ -290,8 +290,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
         );
     };
 
-    const currentReportTitle = activeReportType === 'ear' 
-        ? 'EAR Report' 
+    const currentReportTitle = activeReportType === 'ear'
+        ? 'EAR Report'
         : (activeReportAppId ? getAppName(activeReportAppId) : '');
 
     return (
@@ -416,7 +416,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
                                             const hasIncomes = earDetails.incomes.length > 0;
                                             const hasExpenses = earDetails.expenses.length > 0;
                                             const hasAnyData = hasIncomes || hasExpenses;
-                                            
+
                                             if (!hasAnyData) {
                                                 return (
                                                     <div style={{ marginTop: '12px', paddingTop: '8px', borderTop: '2px solid #808080' }}>
@@ -426,25 +426,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
                                                     </div>
                                                 );
                                             }
-                                            
+
                                             const incomesToShow = earExpanded ? earDetails.incomes : earDetails.incomes.slice(0, 5);
                                             const expensesToShow = earExpanded ? earDetails.expenses : earDetails.expenses.slice(0, 5);
-                                            
+
                                             const incomesOver5 = Math.max(0, earDetails.incomes.length - 5);
                                             const expensesOver5 = Math.max(0, earDetails.expenses.length - 5);
                                             const totalOver5 = incomesOver5 + expensesOver5;
                                             const hasMore = totalOver5 > 0;
-                                            
+
                                             return (
                                                 <div style={{ marginTop: '12px', paddingTop: '8px', borderTop: '2px solid #808080' }}>
                                                     {hasIncomes && (
-                                                        <BreakdownTable 
+                                                        <BreakdownTable
                                                             data={incomesToShow}
                                                             title="Incomes"
                                                         />
                                                     )}
                                                     {hasExpenses && (
-                                                        <BreakdownTable 
+                                                        <BreakdownTable
                                                             data={expensesToShow}
                                                             title="Expenses"
                                                         />

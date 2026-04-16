@@ -63,7 +63,7 @@ export const ApplicationReportModal: React.FC<ApplicationReportModalProps> = ({
         name: editName,
         amount: amount,
         submission_deadline: editDeadline || undefined,
-        group_id: dataGroupId,
+        data_group: dataGroupId,
       }, {
         onSettled: closeModal,
       });

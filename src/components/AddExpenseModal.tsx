@@ -2,7 +2,6 @@ import React, { useState, useRef, useCallback } from 'react';
 import { useCreateExpense, useBulkImportExpenses } from '../hooks/useExpenses';
 import { EXPENSE_TYPES, APPLICATIONS } from '../api/types';
 import Papa from 'papaparse';
-import type { Expense } from '../api/types';
 
 interface AddExpenseModalProps {
   isOpen: boolean;
@@ -18,12 +17,35 @@ interface CsvRow {
 }
 
 const _DATE_FORMATS = [
-  { value: 'auto-detect', label: 'Auto-detect' },
-  { value: 'DD.MM.YYYY', label: 'DD.MM.YYYY' },
-  { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD' },
-  { value: 'DD/MM/YYYY', label: 'DD/MM/YYYY' },
-  { value: 'MM/DD/YYYY', label: 'MM/DD/YYYY' },
+  { value: 'auto-detect', label: 'Auto-detect', disabled: false },
+  { value: 'DD.MM.YYYY', label: 'DD.MM.YYYY', disabled: false },
+  { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD', disabled: true },
+  { value: 'DD/MM/YYYY', label: 'DD/MM/YYYY', disabled: true },
+  { value: 'MM/DD/YYYY', label: 'MM/DD/YYYY', disabled: true },
 ];
+
+// Helper to convert date string to YYYY-MM-DD format
+const convertToYmd = (dateStr: string, format: string): string => {
+  const trimmed = dateStr.trim();
+  if (!trimmed) return '';
+  
+  // If already in YYYY-MM-DD format, return as-is
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return trimmed;
+  }
+  
+  // Handle DD.MM.YYYY format
+  if (format === 'DD.MM.YYYY' || format === 'auto-detect') {
+    const match = trimmed.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+    if (match) {
+      const [, day, month, year] = match;
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+  }
+  
+  // Return empty string for unparseable dates (handler will handle error)
+  return '';
+};
 
 // Windows 98 styled progress bar component
 const _Win98ProgressBar: React.FC<{ progress: number; label?: string }> = ({ progress, label }) => {
@@ -94,7 +116,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
     expense_type: 0,
     bill: 0,
     application: 0,
-    Bargeldabhebung: false,
+    is_cash: false,
   });
   const [manualErrors, setManualErrors] = useState<Record<string, string>>({});
   
@@ -110,10 +132,6 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
   const [dateFormat, setDateFormat] = useState('auto-detect');
   const [detectedDateFormat, setDetectedDateFormat] = useState('');
   const [_invalidRows, setInvalidRows] = useState<number[]>([]);
-  
-  // Duplicate detection state
-  const [_duplicates, setDuplicates] = useState<Array<{ index: number; row: CsvRow; existing: Expense }>>([]);
-  const [_approvedDuplicates, _setApprovedDuplicates] = useState<Set<number>>(new Set());
   
   // Import progress
   const [_importProgress, _setImportProgress] = useState(0);
@@ -142,7 +160,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
         expense_type: 0,
         bill: 0,
         application: 0,
-        Bargeldabhebung: false,
+        is_cash: false,
       });
       setManualErrors({});
       _setCsvColumns([]);
@@ -152,8 +170,6 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
       setDateFormat('auto-detect');
       setDetectedDateFormat('');
       setInvalidRows([]);
-      setDuplicates([]);
-      _setApprovedDuplicates(new Set());
       _setImportProgress(0);
       _setImportResults(null);
     }
@@ -264,7 +280,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
         expense_type: manualForm.expense_type || undefined,
         bill: manualForm.bill || undefined,
         application: manualForm.application || undefined,
-        Bargeldabhebung: manualForm.Bargeldabhebung || undefined,
+        is_cash: manualForm.is_cash || undefined,
       });
       
       onSuccess();
@@ -367,8 +383,8 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
       
       return {
         partner: row[columnMapping.partner]?.trim() || 'Unknown',
-        amount: normalizedAmount !== null ? amount : '0',
-        date: row[columnMapping.date] || '',
+        amount: normalizedAmount !== null ? normalizedAmount : 0,
+        date: convertToYmd(row[columnMapping.date] || '', dateFormat),
         row_number: index + 1,
       };
     });
@@ -389,10 +405,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
     
     try {
       const result = await bulkImportMutation.mutateAsync({
-        groupId: dataGroupId,
-        partner_col: columnMapping.partner,
-        amount_col: columnMapping.amount,
-        date_col: columnMapping.date,
+        data_group: dataGroupId,
         date_format: dateFormat === 'auto-detect' ? detectedDateFormat : dateFormat,
         rows: rowsToImport,
       });
@@ -538,8 +551,8 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
           <input
             id="cash-checkbox"
             type="checkbox"
-            checked={manualForm.Bargeldabhebung}
-            onChange={(e) => setManualForm({ ...manualForm, Bargeldabhebung: e.target.checked })}
+            checked={manualForm.is_cash}
+            onChange={(e) => setManualForm({ ...manualForm, is_cash: e.target.checked })}
           />
           <label htmlFor="cash-checkbox" style={{ fontSize: '12px' }}>
             Cash (Bargeldabhebung)
@@ -729,7 +742,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
                   }}
                 >
                   {_DATE_FORMATS.map(fmt => (
-                    <option key={fmt.value} value={fmt.value}>{fmt.label}</option>
+                    <option key={fmt.value} value={fmt.value} disabled={fmt.disabled}>{fmt.label}</option>
                   ))}
                 </select>
                 {detectedDateFormat && dateFormat === 'auto-detect' && (

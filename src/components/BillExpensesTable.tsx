@@ -69,17 +69,17 @@ export const BillExpensesTable: React.FC<BillExpensesTableProps> = ({ dataGroupI
                             {filteredExpenses.map((expense: Expense) => (
                                 <tr key={expense.id}>
                                     <td style={{
-                                        color: expense.amount > 0 ? '#2e7d32' :
-                                            expense.bill === 0 && expense.amount < 0 ? '#f57c00' : undefined,
+                                        color: parseFloat(String(expense.amount)) > 0 ? '#2e7d32' :
+                                            expense.bill === 0 && parseFloat(String(expense.amount)) < 0 ? '#f57c00' : undefined,
                                     }}>{expense.partner}</td>
                                     <td style={{ fontWeight: 'bold' }}>
-                                        {expense.amount > 0 ? '+' : ''}€ {expense.amount.toFixed(2)}
+                                        {parseFloat(String(expense.amount)) > 0 ? '+' : ''}€ {parseFloat(String(expense.amount)).toFixed(2)}
                                     </td>
                                     <td>{expense.date || '-'}</td>
                                     <td>
                                         <input
                                             type="number"
-                                            value={expense.bill === 0 ? "-" : expense.bill}
+                                            value={expense.bill === null || expense.bill === 0 ? "" : expense.bill}
                                             onChange={(e) =>
                                                 updateBill.mutate({
                                                     id: expense.id,

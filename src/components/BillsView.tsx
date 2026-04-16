@@ -49,6 +49,7 @@ export const BillsView: React.FC<BillsViewProps> = ({ dataGroupId }) => {
             updateBill.mutate({
                 id: selectedBill.id,
                 bill: {
+                    filename: selectedBill.filename,
                     amount: amount ? parseFloat(amount) : null,
                     date: date || null,
                 },

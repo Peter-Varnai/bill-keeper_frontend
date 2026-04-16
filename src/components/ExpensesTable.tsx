@@ -135,16 +135,16 @@ export const ExpensesTable: React.FC<ExpensesTableProps> = ({ onExpenseClick, da
                                         cursor: onExpenseClick ? 'pointer' : 'default',
                                     }}>
                                     <td style={{
-                                        color: expense.amount > 0 ? '#2e7d32' :
-                                            expense.bill === 0 && expense.amount < 0 ? '#f57c00' : undefined,
+                                        color: parseFloat(String(expense.amount)) > 0 ? '#2e7d32' :
+                                            expense.bill === 0 && parseFloat(String(expense.amount)) < 0 ? '#f57c00' : undefined,
                                     }}>{expense.partner}</td>
                                     <td style={{ fontWeight: 'bold' }}>
-                                        {expense.amount > 0 ? '+' : ''}€ {expense.amount.toFixed(2)}
+                                        {parseFloat(String(expense.amount)) > 0 ? '+' : ''}€ {parseFloat(String(expense.amount)).toFixed(2)}
                                     </td>
                                     <td>
                                         <input
                                             type="number"
-                                            value={expense.bill === 0 ? "-" : expense.bill}
+                                            value={expense.bill === null || expense.bill === 0 ? "" : expense.bill}
                                             onChange={(e) =>
                                                 updateBill.mutate({
                                                     id: expense.id,
@@ -165,8 +165,8 @@ export const ExpensesTable: React.FC<ExpensesTableProps> = ({ onExpenseClick, da
                                                     typeId: Number(value),
                                                 })
                                             }
-                                            options={getExpenseTypeOptions(expense.amount)}
-                                            disabled={expense.amount === 0}
+                                            options={getExpenseTypeOptions(Number(expense.amount))}
+                                            disabled={Number(expense.amount) === 0}
                                             style={{ width: '200px', fontSize: '13px' }}
                                         />
                                     </td>
@@ -187,7 +187,7 @@ export const ExpensesTable: React.FC<ExpensesTableProps> = ({ onExpenseClick, da
                                     <td>
                                         <input
                                             type="checkbox"
-                                            checked={expense.Bargeldabhebung || false}
+                                            checked={expense.is_cash || false}
                                             onChange={(e) =>
                                                 updateCash.mutate({
                                                     id: expense.id,
@@ -222,7 +222,7 @@ export const ExpensesTable: React.FC<ExpensesTableProps> = ({ onExpenseClick, da
             <Dialog
                 title="Delete Expense"
                 message={expenseToDelete
-                    ? `Are you sure you want to delete the expense for "${expenseToDelete.partner}" (€${expenseToDelete.amount.toFixed(2)})? This action cannot be undone.`
+                    ? `Are you sure you want to delete the expense for "${expenseToDelete.partner}" (€${Number(expenseToDelete.amount).toFixed(2)})? This action cannot be undone.`
                     : ''
                 }
                 isOpen={!!expenseToDelete}
