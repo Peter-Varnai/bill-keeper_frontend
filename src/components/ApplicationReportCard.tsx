@@ -8,7 +8,9 @@ interface ApplicationReportCardProps {
     isExpanded: boolean;
     onToggleExpand: () => void;
     onViewReport: (appId: number) => void;
-    onPrintReport: (appId: number) => void;
+    onPrintXlsx: (appId: number) => void;
+    onViewBelegsammlung: (appId: number) => void;
+    onPrintBelegsammlung: (appId: number) => void;
     onEdit: (app: ApplicationReport) => void;
 }
 
@@ -18,7 +20,9 @@ export const ApplicationReportCard: React.FC<ApplicationReportCardProps> = ({
     isExpanded,
     onToggleExpand,
     onViewReport,
-    onPrintReport,
+    onPrintXlsx,
+    onViewBelegsammlung,
+    onPrintBelegsammlung,
     onEdit,
 }) => {
     const displayDetails = isExpanded ? summary.details : summary.details.slice(0, 5);
@@ -75,10 +79,10 @@ export const ApplicationReportCard: React.FC<ApplicationReportCardProps> = ({
                             minWidth: '100px',
                         }}
                     >
-                        {isActive ? '✓ View Report' : 'View Report'}
+                        {isActive ? '✓ View Belegaufstellung' : 'View Belegaufstellung'}
                     </button>
                     <button
-                        onClick={() => onPrintReport(summary.application)}
+                        onClick={() => onPrintXlsx(summary.application)}
                         style={{
                             padding: '6px 12px',
                             fontSize: '12px',
@@ -88,7 +92,33 @@ export const ApplicationReportCard: React.FC<ApplicationReportCardProps> = ({
                             minWidth: '100px',
                         }}
                     >
-                        Print Report
+                        Print Belegaufstellung
+                    </button>
+                    <button
+                        onClick={() => onViewBelegsammlung(summary.application)}
+                        style={{
+                            padding: '6px 12px',
+                            fontSize: '12px',
+                            backgroundColor: isActive ? '#d4d0c8' : '#c0c0c0',
+                            border: '2px outset #fff',
+                            cursor: 'pointer',
+                            minWidth: '100px',
+                        }}
+                    >
+                        View Belegsammlung
+                    </button>
+                    <button
+                        onClick={() => onPrintBelegsammlung(summary.application)}
+                        style={{
+                            padding: '6px 12px',
+                            fontSize: '12px',
+                            backgroundColor: '#c0c0c0',
+                            border: '2px outset #fff',
+                            cursor: 'pointer',
+                            minWidth: '100px',
+                        }}
+                    >
+                        Print Belegsammlung
                     </button>
                     <button
                         onClick={() => onEdit({

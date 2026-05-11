@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Bill, Expense, Summary, EarResponse, ReportItem, DataGroup, ApplicationReport } from './types';
+import type { Bill, Expense, Summary, EarResponse, DataGroup, ApplicationReport, ReportItem, BelegaufstellungItem } from './types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
@@ -142,6 +142,9 @@ export const getDataGroups = (): Promise<DataGroup[]> =>
 export const createDataGroup = (name: string, group_type: 'project' | 'organization'): Promise<DataGroup> =>
     apiClient.post('/data_groups', { name, type: group_type }).then((res) => res.data);
 
+export const deleteDataGroup = (id: number): Promise<{ success: boolean; message: string }> =>
+    apiClient.delete(`/data_groups/${id}`).then((res) => res.data);
+
 // Application Reports API
 export const getApplicationReports = (dataGroup: number): Promise<ApplicationReport[]> =>
     apiClient.get(`/application_reports?data_group=${dataGroup}`).then((res) => res.data);
@@ -169,3 +172,28 @@ export const getImageUrl = (filename: string, dataGroup: number): string => {
     console.log('[getImageUrl]', { filename, dataGroup: dataGroup, url });
     return url;
 };
+
+// Utility Data API (bank_stand, cash_stand)
+export interface UtilityDataResponse {
+    data_group: number;
+    bank_stand: number | null;
+    cash_stand: number | null;
+    expense_summary: {
+        bank_total: number;
+        cash_total: number;
+    };
+    calculated_totals: {
+        bank_with_expenses: number;
+        cash_with_expenses: number;
+    };
+}
+
+export const getUtilityData = (dataGroup: number): Promise<UtilityDataResponse> =>
+    apiClient.get(`/utild?data_group=${dataGroup}`).then((res) => res.data);
+
+export const saveUtilityData = (
+    dataGroup: number,
+    bankStand: number | null,
+    cashStand: number | null
+): Promise<{ success: boolean; data_group: number }> =>
+    apiClient.put('/utild', { data_group: dataGroup, bank_stand: bankStand, cash_stand: cashStand }).then((res) => res.data);

@@ -2,12 +2,15 @@ import React, { useState, useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { useSummaries } from '../hooks/useSummaries';
 import { useApplicationReports } from '../hooks/useApplicationReports';
-import { useEar } from '../hooks/useReports';
+import { useEar, useExpensesWithBills } from '../hooks/useReports';
 import { Window } from './windows98';
 import { BreakdownTable } from './BreakdownTable';
 import { ApplicationReportCard } from './ApplicationReportCard';
 import { ApplicationReportModal } from './ApplicationReportModal';
-import { getImageUrl, getReportByApplicationReport } from '../api/client';
+import { AssetOverview } from './AssetOverview';
+import { getImageUrl } from '../api/client';
+import { generateBelegaufstellungHtml, getDummyTemplateData } from '../utils/xlsxTemplate';
+import { convertHtmlToXlsx } from '../utils/xlsxExport';
 import { EXPENSE_TYPES } from '../api/types';
 import type { Summary, ReportItem, EarResponse, Expense, ApplicationReport } from '../api/types';
 
@@ -21,6 +24,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
 
     const [activeReportAppId, setActiveReportAppId] = useState<number | null>(null);
     const [activeReportType, setActiveReportType] = useState<'application' | 'ear' | null>(null);
+    const [reportViewMode, setReportViewMode] = useState<'pdf' | 'xlsx' | 'belegsammlung'>('pdf');
     const [expandedSummary, setExpandedSummary] = useState<number | null>(null);
     const [mandatoryTab, setMandatoryTab] = useState<'ear' | 'assets'>('ear');
     const [earExpanded, setEarExpanded] = useState(false);
@@ -30,6 +34,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
     const [editingAppReport, setEditingAppReport] = useState<ApplicationReport | null>(null);
 
     const earQuery = useEar(dataGroupId);
+    const belegsammlungQuery = useExpensesWithBills(activeReportAppId || 0, dataGroupId);
 
     // Fetch report data dynamically based on activeReportAppId
     const [reportData, setReportData] = useState<ReportItem[] | null>(null);
@@ -39,15 +44,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
     React.useEffect(() => {
         if (activeReportType === 'application' && activeReportAppId) {
             setIsLoadingReport(true);
-            getReportByApplicationReport(activeReportAppId, dataGroupId)
-                .then(data => {
-                    setReportData(data);
-                    setIsLoadingReport(false);
-                })
-                .catch(() => {
-                    setReportData([]);
-                    setIsLoadingReport(false);
-                });
+            // TODO: re-enable when backend /reports route is implemented
+            // getReportByApplicationReport(activeReportAppId, dataGroupId)
+            //     .then(data => {
+            //         setReportData(data);
+            //         setIsLoadingReport(false);
+            //     })
+            //     .catch(() => {
+            //         setReportData([]);
+            //         setIsLoadingReport(false);
+            //     });
+            // Using dummy data for now
+            setTimeout(() => {
+                setReportData(null); // Will use dummy template data instead
+                setIsLoadingReport(false);
+            }, 100);
         } else {
             setReportData(null);
         }
@@ -59,16 +70,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
         contentRef: reportRef,
         documentTitle: `${activeReportAppId || 'ear'}_report`,
     });
-
-    const handleViewReport = (appId: number) => {
-        if (activeReportAppId === appId && activeReportType === 'application') {
-            setActiveReportAppId(null);
-            setActiveReportType(null);
-        } else {
-            setActiveReportAppId(appId);
-            setActiveReportType('application');
-        }
-    };
 
     const handleViewEar = () => {
         if (activeReportType === 'ear') {
@@ -87,6 +88,45 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
         } else {
             setActiveReportType('ear');
         }
+        setTimeout(() => {
+            handlePrint();
+        }, 100);
+    };
+
+    const handlePrintXlsx = () => {
+        const templateData = getDummyTemplateData();
+        const html = generateBelegaufstellungHtml(templateData);
+        convertHtmlToXlsx(html, `${templateData.applicationName}_belegaufstellung.xlsx`);
+    };
+
+    const handleViewXlsx = (appId: number) => {
+        if (activeReportAppId === appId && activeReportType === 'application' && reportViewMode === 'xlsx') {
+            setActiveReportAppId(null);
+            setActiveReportType(null);
+            setReportViewMode('pdf');
+        } else {
+            setActiveReportAppId(appId);
+            setActiveReportType('application');
+            setReportViewMode('xlsx');
+        }
+    };
+
+    const handleViewBelegsammlung = (appId: number) => {
+        if (activeReportAppId === appId && activeReportType === 'application' && reportViewMode === 'belegsammlung') {
+            setActiveReportAppId(null);
+            setActiveReportType(null);
+            setReportViewMode('pdf');
+        } else {
+            setActiveReportAppId(appId);
+            setActiveReportType('application');
+            setReportViewMode('belegsammlung');
+        }
+    };
+
+    const handlePrintBelegsammlung = (appId: number) => {
+        setActiveReportAppId(appId);
+        setActiveReportType('application');
+        setReportViewMode('belegsammlung');
         setTimeout(() => {
             handlePrint();
         }, 100);
@@ -223,7 +263,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
                             </table>
 
                             <div style={{ textAlign: 'right', marginTop: '10px', fontSize: '10px' }}>
-                                Page {pageIndex + 1} of {pages.length}
+                                Seite {pageIndex + 1} von {pages.length}
                             </div>
                         </div>
                     ))}
@@ -282,7 +322,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
                             </div>
                         </div>
                         <div style={{ textAlign: 'right', marginTop: '10px', fontSize: '10px' }}>
-                            Page {index + 1} of {reportItems.length} - {title}
+                            Seite {index + 1} von {reportItems.length} - {title}
                         </div>
                     </div>
                 ))}
@@ -330,8 +370,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
                                         isActive={activeReportAppId === summary.application}
                                         isExpanded={expandedSummary === summary.application}
                                         onToggleExpand={() => toggleExpand(summary.application)}
-                                        onViewReport={handleViewReport}
-                                        onPrintReport={handlePrintDirect}
+                                        onViewReport={handleViewXlsx}
+                                        onPrintXlsx={handlePrintXlsx}
+                                        onViewBelegsammlung={handleViewBelegsammlung}
+                                        onPrintBelegsammlung={handlePrintBelegsammlung}
                                         onEdit={handleEditClick}
                                     />
                                 ))}
@@ -477,9 +519,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
                             )}
 
                             {mandatoryTab === 'assets' && (
-                                <div style={{ padding: '16px', textAlign: 'center', color: '#666' }}>
-                                    Asset Overview - Coming soon...
-                                </div>
+                                <AssetOverview dataGroupId={dataGroupId} />
                             )}
                         </div>
                     </div>
@@ -497,9 +537,68 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
                             {isLoadingReport ? (
                                 <div style={{ padding: '16px', textAlign: 'center' }}>Loading report...</div>
                             ) : (
-                                renderReportContent(
-                                    activeReportType === 'ear' ? earQuery.data : reportData || [],
-                                    currentReportTitle
+                                activeReportType === 'application' && reportViewMode === 'xlsx' ? (
+                                    <div dangerouslySetInnerHTML={{ __html: generateBelegaufstellungHtml(getDummyTemplateData()) }} />
+                                ) : activeReportType === 'application' && reportViewMode === 'belegsammlung' ? (
+                                    belegsammlungQuery.isLoading ? (
+                                        <div style={{ padding: '16px', textAlign: 'center' }}>Loading Belegsammlung...</div>
+                                    ) : (
+                                        <div ref={reportRef}>
+                                            <style>{`
+                                                @media print {
+                                                    .belegsammlung-page {
+                                                        page-break-after: always;
+                                                        width: 210mm;
+                                                        min-height: 297mm;
+                                                        padding: 14mm;
+                                                        box-sizing: border-box;
+                                                    }
+                                                    .belegsammlung-page:last-child {
+                                                        page-break-after: auto;
+                                                    }
+                                                }
+                                            `}</style>
+                                            {belegsammlungQuery.data?.map((item, index) => (
+                                                <div key={item.expense_id} className="belegsammlung-page" style={{ marginBottom: '20px' }}>
+                                                    <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+                                                        <div style={{ flex: 1 }}>
+                                                            {item.filename ? (
+                                                                <img
+                                                                    src={getImageUrl(item.filename, dataGroupId)}
+                                                                    alt={`Beleg ${item.expense_id}`}
+                                                                    style={{ maxWidth: '100%', maxHeight: '250mm', border: '1px solid #ccc' }}
+                                                                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                                                />
+                                                            ) : (
+                                                                <div style={{ width: '100%', height: '200px', backgroundColor: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                    No Image
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div style={{ width: '27%' }}>
+                                                            <table className="table" style={{ width: '100%', fontSize: '11px' }}>
+                                                                <tbody>
+                                                                    <tr><td>No. {item.expense_id}</td></tr>
+                                                                    <tr><td style={{ fontWeight: 'bold' }}>€ {item.amount}</td></tr>
+                                                                    <tr><td>{EXPENSE_TYPES[item.expense_type] || 'Unknown'}</td></tr>
+                                                                    <tr><td>{item.partner}</td></tr>
+                                                                    <tr><td>{item.date || '-'}</td></tr>
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ textAlign: 'right', marginTop: '10px', fontSize: '10px' }}>
+                                                        Seite {index + 1} von {belegsammlungQuery.data?.length || 0} - discotec Belegsammlung
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )
+                                ) : (
+                                    renderReportContent(
+                                        activeReportType === 'ear' ? earQuery.data : reportData || [],
+                                        currentReportTitle
+                                    )
                                 )
                             )}
                         </div>

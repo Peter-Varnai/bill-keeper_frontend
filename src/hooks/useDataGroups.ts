@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getDataGroups, createDataGroup } from '../api/client';
+import { getDataGroups, createDataGroup, deleteDataGroup } from '../api/client';
 
 const DATA_GROUPS_KEY = 'data_groups';
 
@@ -18,6 +18,18 @@ export const useCreateDataGroup = () => {
       createDataGroup(name, group_type),
     onSuccess: () => {
       // Refetch data groups after successful creation
+      queryClient.invalidateQueries({ queryKey: [DATA_GROUPS_KEY] });
+    },
+  });
+};
+
+export const useDeleteDataGroup = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: number) => deleteDataGroup(id),
+    onSuccess: () => {
+      // Invalidate to trigger refetch - the useEffect in App.tsx will handle selection
       queryClient.invalidateQueries({ queryKey: [DATA_GROUPS_KEY] });
     },
   });

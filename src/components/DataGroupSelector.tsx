@@ -7,6 +7,7 @@ interface DataGroupSelectorProps {
     selectedDataGroup: number;
     onSelectDataGroup: (groupId: number) => void;
     onAddGroup: (name: string, group_type: 'project' | 'organization') => void;
+    onDeleteGroup: (groupId: number) => void;
     isLoading?: boolean;
 }
 
@@ -15,11 +16,14 @@ export const DataGroupSelector: React.FC<DataGroupSelectorProps> = ({
     selectedDataGroup,
     onSelectDataGroup,
     onAddGroup,
+    onDeleteGroup,
     isLoading = false,
 }) => {
     const [showForm, setShowForm] = useState(false);
     const [newName, setNewName] = useState('');
     const [newType, setNewType] = useState<'project' | 'organization'>('project');
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [groupToDelete, setGroupToDelete] = useState<number | null>(null);
 
     const handleCreate = () => {
         if (newName.trim()) {
@@ -63,6 +67,39 @@ export const DataGroupSelector: React.FC<DataGroupSelectorProps> = ({
                 +
             </button>
 
+            {/* Delete Button */}
+            <button
+                onClick={() => {
+                    setGroupToDelete(selectedDataGroup);
+                    setShowDeleteConfirm(true);
+                }}
+                disabled={isLoading || groups.length <= 1}
+                title={groups.length <= 1 ? 'Cannot delete the last data group' : 'Delete data group'}
+                style={{
+                    padding: '6px 10px',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    backgroundColor: '#c0c0c0',
+                    border: '2px outset #fff',
+                    cursor: isLoading || groups.length <= 1 ? 'not-allowed' : 'pointer',
+                    color: groups.length <= 1 ? '#888' : '#000',
+                    height: '100%',
+                }}
+                onMouseDown={(e) => {
+                    if (groups.length > 1 && !isLoading) {
+                        e.currentTarget.style.border = '2px inset #808080';
+                    }
+                }}
+                onMouseUp={(e) => {
+                    e.currentTarget.style.border = '2px outset #fff';
+                }}
+                onMouseLeave={(e) => {
+                    e.currentTarget.style.border = '2px outset #fff';
+                }}
+            >
+                🗑
+            </button>
+
             {/* Dropdown */}
             <Select
                 value={selectedDataGroup}
@@ -80,6 +117,114 @@ export const DataGroupSelector: React.FC<DataGroupSelectorProps> = ({
                     height: '100%',
                 }}
             />
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteConfirm && groupToDelete !== null && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        zIndex: 9999,
+                    }}
+                    onClick={() => setShowDeleteConfirm(false)}
+                >
+                    <div
+                        className="window"
+                        style={{
+                            minWidth: '320px',
+                            backgroundColor: '#c0c0c0',
+                            border: '2px outset #fff',
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div
+                            className="title-bar"
+                            style={{
+                                backgroundColor: '#800000',
+                                color: 'white',
+                                padding: '4px 8px',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                            }}
+                        >
+                            <div className="title-bar-text" style={{ fontWeight: 'bold' }}>
+                                Confirm Delete
+                            </div>
+                            <button
+                                onClick={() => setShowDeleteConfirm(false)}
+                                style={{
+                                    backgroundColor: '#c0c0c0',
+                                    border: '2px outset #fff',
+                                    padding: '2px 8px',
+                                    fontSize: '12px',
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                ×
+                            </button>
+                        </div>
+                        <div className="window-body" style={{ padding: '16px' }}>
+                            <div style={{ marginBottom: '16px', fontSize: '14px' }}>
+                                <p style={{ marginBottom: '8px' }}>
+                                    <strong>Warning:</strong> This will permanently delete this data group and ALL related data including:
+                                </p>
+                                <ul style={{ marginLeft: '20px', fontSize: '12px' }}>
+                                    <li>All expenses</li>
+                                    <li>All bills</li>
+                                    <li>All application reports</li>
+                                    <li>Utility data</li>
+                                    <li>All uploaded files</li>
+                                </ul>
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                <button
+                                    onClick={() => setShowDeleteConfirm(false)}
+                                    style={{
+                                        padding: '6px 16px',
+                                        fontSize: '12px',
+                                        backgroundColor: '#c0c0c0',
+                                        border: '2px outset #fff',
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        onDeleteGroup(groupToDelete);
+                                        setShowDeleteConfirm(false);
+                                        setGroupToDelete(null);
+                                    }}
+                                    style={{
+                                        padding: '6px 16px',
+                                        fontSize: '12px',
+                                        backgroundColor: '#c0c0c0',
+                                        border: '2px outset #fff',
+                                        cursor: 'pointer',
+                                        color: '#800000',
+                                    }}
+                                    onMouseDown={(e) => {
+                                        e.currentTarget.style.border = '2px inset #808080';
+                                    }}
+                                    onMouseUp={(e) => {
+                                        e.currentTarget.style.border = '2px outset #fff';
+                                    }}
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Add Group Form Modal */}
             {showForm && (

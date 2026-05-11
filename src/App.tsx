@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { ExpensesTable } from './components/ExpensesTable';
 import { BillsView } from './components/BillsView';
 import { DashboardView } from './components/DashboardView';
@@ -7,7 +7,7 @@ import { DataGroupSelector } from './components/DataGroupSelector';
 import { AddExpenseModal } from './components/AddExpenseModal';
 import { UploadBillsModal } from './components/UploadBillsModal';
 import { Dialog } from './components/windows98';
-import { useDataGroups, useCreateDataGroup } from './hooks/useDataGroups';
+import { useDataGroups, useCreateDataGroup, useDeleteDataGroup } from './hooks/useDataGroups';
 import '98.css';
 import './styles/overrides.css';
 
@@ -38,6 +38,8 @@ const AppContent: React.FC = () => {
 
   const { data: groups, isLoading: isLoadingGroups } = useDataGroups();
   const createGroupMutation = useCreateDataGroup();
+  const deleteGroupMutation = useDeleteDataGroup();
+  const queryClient = useQueryClient();
 
   // Persist selected data group to localStorage whenever it changes
   useEffect(() => {
@@ -78,6 +80,18 @@ const AppContent: React.FC = () => {
     );
   };
 
+  const handleDeleteGroup = (groupId: number) => {
+    deleteGroupMutation.mutate(groupId, {
+      onSuccess: () => {
+        // Invalidate and refetch to update the groups list
+        queryClient.invalidateQueries({ queryKey: ['data_groups'] });
+      },
+      onError: (err) => {
+        setError(`Failed to delete group: ${err.message}`);
+      },
+    });
+  };
+
   const renderTabBar = () => (
     <div style={{ 
       display: 'flex', 
@@ -88,13 +102,14 @@ const AppContent: React.FC = () => {
       border: '2px outset #fff'
     }}>
       {/* Data Group Selector */}
-      {groups && selectedDataGroup && (
+      {groups && groups.length > 0 && (
         <DataGroupSelector
           groups={groups}
-          selectedDataGroup={selectedDataGroup}
+          selectedDataGroup={selectedDataGroup || groups[0].id}
           onSelectDataGroup={setSelectedDataGroup}
           onAddGroup={handleAddGroup}
-          isLoading={isLoadingGroups || createGroupMutation.isPending}
+          onDeleteGroup={handleDeleteGroup}
+          isLoading={isLoadingGroups || createGroupMutation.isPending || deleteGroupMutation.isPending}
         />
       )}
       

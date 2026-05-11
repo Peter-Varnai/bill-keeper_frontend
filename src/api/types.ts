@@ -48,6 +48,16 @@ export interface ReportItem {
     is_cash: boolean | null;
 }
 
+export interface BelegaufstellungItem {
+    expense_id: number;
+    partner: string;
+    amount: string;
+    date: string | null;
+    expense_type_name: string;
+    is_cash: boolean | null;
+    bill_date: string | null;
+}
+
 export interface DataGroup {
     id: number;
     name: string;
