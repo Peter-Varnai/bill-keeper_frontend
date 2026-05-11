@@ -46,6 +46,7 @@ export interface ReportItem {
     expense_type: number;
     filename: string;
     is_cash: boolean | null;
+    bill_filename?: string | null;
 }
 
 export interface BelegaufstellungItem {
@@ -56,6 +57,7 @@ export interface BelegaufstellungItem {
     expense_type_name: string;
     is_cash: boolean | null;
     bill_date: string | null;
+    bill_filename?: string | null;
 }
 
 export interface DataGroup {

@@ -562,9 +562,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
                                                 <div key={item.expense_id} className="belegsammlung-page" style={{ marginBottom: '20px' }}>
                                                     <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
                                                         <div style={{ flex: 1 }}>
-                                                            {item.filename ? (
+                                                            {item.bill_filename ? (
                                                                 <img
-                                                                    src={getImageUrl(item.filename, dataGroupId)}
+                                                                    src={getImageUrl(item.bill_filename, dataGroupId)}
                                                                     alt={`Beleg ${item.expense_id}`}
                                                                     style={{ maxWidth: '100%', maxHeight: '250mm', border: '1px solid #ccc' }}
                                                                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
