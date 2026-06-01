@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { useSummaries } from '../hooks/useSummaries';
+import { useBills } from '../hooks/useBills';
 import { useApplicationReports } from '../hooks/useApplicationReports';
 import { useEar, useExpensesWithBills } from '../hooks/useReports';
 import { Window } from './windows98';
@@ -9,8 +10,8 @@ import { ApplicationReportCard } from './ApplicationReportCard';
 import { ApplicationReportModal } from './ApplicationReportModal';
 import { AssetOverview } from './AssetOverview';
 import { getImageUrl } from '../api/client';
-import { generateBelegaufstellungHtml, getDummyTemplateData } from '../utils/xlsxTemplate';
-import { convertHtmlToXlsx } from '../utils/xlsxExport';
+import { generateBelegaufstellungHtml } from '../utils/xlsxTemplate';
+import { convertHtmlToXlsx, exportEarToCsv } from '../utils/xlsxExport';
 import { EXPENSE_TYPES } from '../api/types';
 import type { Summary, ReportItem, EarResponse, Expense, ApplicationReport } from '../api/types';
 
@@ -34,7 +35,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
     const [editingAppReport, setEditingAppReport] = useState<ApplicationReport | null>(null);
 
     const earQuery = useEar(dataGroupId);
-    const belegsammlungQuery = useExpensesWithBills(activeReportAppId || 0, dataGroupId);
+    const reportQuery = useExpensesWithBills(activeReportAppId || 0, dataGroupId);
+    const { data: bills } = useBills(dataGroupId);
 
     // Fetch report data dynamically based on activeReportAppId
     const [reportData, setReportData] = useState<ReportItem[] | null>(null);
@@ -81,22 +83,43 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
         }
     };
 
-    const handlePrintDirect = (appId?: number) => {
-        if (appId) {
-            setActiveReportAppId(appId);
-            setActiveReportType('application');
-        } else {
-            setActiveReportType('ear');
+    const handleExportEarCsv = () => {
+        if (earQuery.data) {
+            exportEarToCsv(earQuery.data, dataGroupId);
         }
-        setTimeout(() => {
-            handlePrint();
-        }, 100);
     };
 
-    const handlePrintXlsx = () => {
-        const templateData = getDummyTemplateData();
+    const handlePrintXlsx = (appId: number) => {
+        if (!reportQuery.data || !applicationReports || !bills) return;
+        const app = applicationReports.find(a => a.id === appId);
+        const applicationName = app?.name || 'Application';
+        
+        const enrichedExpenses: ReportItem[] = (reportQuery.data as any[]).map((item: any) => {
+            const matchedBill = bills.find(b => b.filename === item.bill_filename);
+            return {
+                expense_id: item.expense_id,
+                partner: item.partner,
+                amount: item.amount,
+                date: item.date,
+                expense_type: 0,
+                filename: item.bill_filename || '',
+                is_cash: item.is_cash,
+                bill_filename: item.bill_filename,
+                bill_id: matchedBill?.id ?? null,
+                bill_date: item.bill_date || null,
+                expense_type_name: item.expense_type_name || '',
+            };
+        });
+        
+        const total = enrichedExpenses.reduce((sum, e) => sum + Math.abs(parseFloat(e.amount)), 0);
+        const templateData = {
+            applicationName,
+            dataGroupId,
+            expenses: enrichedExpenses,
+            total,
+        };
         const html = generateBelegaufstellungHtml(templateData);
-        convertHtmlToXlsx(html, `${templateData.applicationName}_belegaufstellung.xlsx`);
+        convertHtmlToXlsx(html, `${applicationName}_belegaufstellung.xlsx`);
     };
 
     const handleViewXlsx = (appId: number) => {
@@ -438,7 +461,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
                                                     {activeReportType === 'ear' ? '✓ View Report' : 'View Report'}
                                                 </button>
                                                 <button
-                                                    onClick={() => handlePrintDirect()}
+                                                    onClick={handleExportEarCsv}
                                                     style={{
                                                         padding: '6px 12px',
                                                         fontSize: '12px',
@@ -448,7 +471,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
                                                         minWidth: '100px',
                                                     }}
                                                 >
-                                                    Print Report
+                                                    Export CSV
                                                 </button>
                                             </div>
                                         </div>
@@ -538,9 +561,33 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
                                 <div style={{ padding: '16px', textAlign: 'center' }}>Loading report...</div>
                             ) : (
                                 activeReportType === 'application' && reportViewMode === 'xlsx' ? (
-                                    <div dangerouslySetInnerHTML={{ __html: generateBelegaufstellungHtml(getDummyTemplateData()) }} />
+                                    (() => {
+                                        if (!reportQuery.data || !applicationReports || !bills) {
+                                            return <div style={{ padding: '16px', textAlign: 'center' }}>Loading...</div>;
+                                        }
+                                        const app = applicationReports.find(a => a.id === activeReportAppId);
+                                        const applicationName = app?.name || 'Application';
+                                        const enrichedExpenses: ReportItem[] = (reportQuery.data as any[]).map((item: any) => {
+                                            const matchedBill = bills.find(b => b.filename === item.bill_filename);
+                                            return {
+                                                expense_id: item.expense_id,
+                                                partner: item.partner,
+                                                amount: item.amount,
+                                                date: item.date,
+                                                expense_type: 0,
+                                                filename: item.bill_filename || '',
+                                                is_cash: item.is_cash,
+                                                bill_filename: item.bill_filename,
+                                                bill_id: matchedBill?.id ?? null,
+                                                bill_date: item.bill_date || null,
+                                                expense_type_name: item.expense_type_name || '',
+                                            };
+                                        });
+                                        const total = enrichedExpenses.reduce((sum, e) => sum + Math.abs(parseFloat(e.amount)), 0);
+                                        return <div dangerouslySetInnerHTML={{ __html: generateBelegaufstellungHtml({ applicationName, dataGroupId, expenses: enrichedExpenses, total }) }} />;
+                                    })()
                                 ) : activeReportType === 'application' && reportViewMode === 'belegsammlung' ? (
-                                    belegsammlungQuery.isLoading ? (
+                                    reportQuery.isLoading ? (
                                         <div style={{ padding: '16px', textAlign: 'center' }}>Loading Belegsammlung...</div>
                                     ) : (
                                         <div ref={reportRef}>
@@ -558,7 +605,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
                                                     }
                                                 }
                                             `}</style>
-                                            {belegsammlungQuery.data?.map((item, index) => (
+                                            {reportQuery.data?.map((item, index) => {
+                                                const matchedBill = (bills || []).find(b => b.filename === item.bill_filename);
+                                                const billId = matchedBill?.id;
+                                                return (
                                                 <div key={item.expense_id} className="belegsammlung-page" style={{ marginBottom: '20px' }}>
                                                     <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
                                                         <div style={{ flex: 1 }}>
@@ -578,9 +628,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
                                                         <div style={{ width: '27%' }}>
                                                             <table className="table" style={{ width: '100%', fontSize: '11px' }}>
                                                                 <tbody>
-                                                                    <tr><td>No. {item.expense_id}</td></tr>
+                                                                    <tr><td>No. {billId ? `Bill #${billId}` : 'No Bill'}</td></tr>
                                                                     <tr><td style={{ fontWeight: 'bold' }}>€ {item.amount}</td></tr>
-                                                                    <tr><td>{EXPENSE_TYPES[item.expense_type] || 'Unknown'}</td></tr>
+                                                                    <tr><td>{item.expense_type_name || 'Unknown'}</td></tr>
                                                                     <tr><td>{item.partner}</td></tr>
                                                                     <tr><td>{item.date || '-'}</td></tr>
                                                                 </tbody>
@@ -588,10 +638,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
                                                         </div>
                                                     </div>
                                                     <div style={{ textAlign: 'right', marginTop: '10px', fontSize: '10px' }}>
-                                                        Seite {index + 1} von {belegsammlungQuery.data?.length || 0} - discotec Belegsammlung
+                                                        Seite {index + 1} von {reportQuery.data?.length || 0} - discotec Belegsammlung
                                                     </div>
                                                 </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     )
                                 ) : (

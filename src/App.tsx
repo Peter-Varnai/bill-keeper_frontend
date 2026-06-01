@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/reac
 import { ExpensesTable } from './components/ExpensesTable';
 import { BillsView } from './components/BillsView';
 import { DashboardView } from './components/DashboardView';
+import { ApplicationBreakdownPanel } from './components/ApplicationBreakdownPanel';
 import { DataGroupSelector } from './components/DataGroupSelector';
 import { AddExpenseModal } from './components/AddExpenseModal';
 import { UploadBillsModal } from './components/UploadBillsModal';
@@ -209,7 +210,16 @@ const AppContent: React.FC = () => {
 
     switch (activeTab) {
       case 'expenses':
-        return <ExpensesTable dataGroupId={selectedDataGroup} />;
+        return (
+          <div style={{ display: 'flex', gap: '8px', height: 'calc(100vh - 80px)' }}>
+            <div style={{ flex: 3 }}>
+              <ExpensesTable dataGroupId={selectedDataGroup} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <ApplicationBreakdownPanel dataGroupId={selectedDataGroup} />
+            </div>
+          </div>
+        );
       case 'bills':
         return <BillsView dataGroupId={selectedDataGroup} />;
       case 'dashboard':

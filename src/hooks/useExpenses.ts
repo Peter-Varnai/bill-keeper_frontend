@@ -74,6 +74,7 @@ export const useUpdateExpenseType = (groupId: number) => {
         },
         onSettled: () => {
             queryClient.invalidateQueries({ queryKey: [EXPENSES_KEY, groupId] });
+            queryClient.invalidateQueries({ queryKey: ['summaries'] });
         },
     });
 };
@@ -104,6 +105,7 @@ export const useUpdateExpenseApplication = (groupId: number) => {
         },
         onSettled: () => {
             queryClient.invalidateQueries({ queryKey: [EXPENSES_KEY, groupId] });
+            queryClient.invalidateQueries({ queryKey: ['summaries'] });
         },
     });
 };

@@ -1,4 +1,5 @@
 import React from 'react';
+import { EXPENSE_TYPES } from '../api/types';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -7,6 +8,10 @@ interface ExpenseSearchProps {
     onSearchNameChange: (name: string) => void;
     selectedMonth: number | null;
     onMonthChange: (month: number | null) => void;
+    selectedExpenseType: number | null;
+    onExpenseTypeChange: (type: number | null) => void;
+    billFilter: 'all' | 'yes' | 'no';
+    onBillFilterChange: (filter: 'all' | 'yes' | 'no') => void;
 }
 
 export const ExpenseSearch: React.FC<ExpenseSearchProps> = ({
@@ -14,7 +19,20 @@ export const ExpenseSearch: React.FC<ExpenseSearchProps> = ({
     onSearchNameChange,
     selectedMonth,
     onMonthChange,
+    selectedExpenseType,
+    onExpenseTypeChange,
+    billFilter,
+    onBillFilterChange,
 }) => {
+    const expenseTypeOptions = [
+        { value: -1, label: 'All Types' },
+        { value: -2, label: '──────────' },
+        ...Object.entries(EXPENSE_TYPES).map(([value, label]) => ({
+            value: Number(value),
+            label,
+        })),
+    ];
+
     return (
         <div style={{ padding: '8px', borderBottom: '2px solid #808080', backgroundColor: '#c0c0c0' }}>
             <div style={{ marginBottom: '8px' }}>
@@ -33,7 +51,7 @@ export const ExpenseSearch: React.FC<ExpenseSearchProps> = ({
                     }}
                 />
             </div>
-            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '8px' }}>
                 {MONTHS.map((month, index) => {
                     const monthNum = index + 1;
                     const isSelected = selectedMonth === monthNum;
@@ -54,6 +72,47 @@ export const ExpenseSearch: React.FC<ExpenseSearchProps> = ({
                         </button>
                     );
                 })}
+            </div>
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <label style={{ fontSize: '11px' }}>Type:</label>
+                    <select
+                        value={selectedExpenseType ?? -1}
+                        onChange={(e) => {
+                            const val = Number(e.target.value);
+                            onExpenseTypeChange(val === -1 ? null : val);
+                        }}
+                        style={{
+                            fontSize: '11px',
+                            padding: '2px 4px',
+                            border: '2px inset #fff',
+                            backgroundColor: '#fff',
+                        }}
+                    >
+                        {expenseTypeOptions.map((opt) => (
+                            <option key={opt.value} value={opt.value} disabled={opt.value <= 0}>
+                                {opt.label}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <label style={{ fontSize: '11px' }}>Bill:</label>
+                    <select
+                        value={billFilter}
+                        onChange={(e) => onBillFilterChange(e.target.value as 'all' | 'yes' | 'no')}
+                        style={{
+                            fontSize: '11px',
+                            padding: '2px 4px',
+                            border: '2px inset #fff',
+                            backgroundColor: '#fff',
+                        }}
+                    >
+                        <option value="all">All</option>
+                        <option value="yes">Has Bill</option>
+                        <option value="no">No Bill</option>
+                    </select>
+                </div>
             </div>
         </div>
     );

@@ -65,9 +65,16 @@ export const ExpensesTable: React.FC<ExpensesTableProps> = ({ onExpenseClick, da
     // Search state
     const [searchName, setSearchName] = useState('');
     const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+    const [selectedExpenseType, setSelectedExpenseType] = useState<number | null>(null);
+    const [billFilter, setBillFilter] = useState<'all' | 'yes' | 'no'>('all');
 
     // Filter expenses
-    const filteredExpenses = useExpenseFilter(expenses, { searchName, selectedMonth });
+    const filteredExpenses = useExpenseFilter(expenses, {
+        searchName,
+        selectedMonth,
+        selectedExpenseType,
+        billFilter,
+    });
 
     if (isLoading) {
         return (
@@ -104,13 +111,17 @@ export const ExpensesTable: React.FC<ExpensesTableProps> = ({ onExpenseClick, da
     };
 
     return (
-        <Window title="Expenses" style={{ height: 'calc(100vh - 80px)' }}>
+        <Window title="Expenses" style={{ height: '100%' }}>
             <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <ExpenseSearch
                     searchName={searchName}
                     onSearchNameChange={setSearchName}
                     selectedMonth={selectedMonth}
                     onMonthChange={setSelectedMonth}
+                    selectedExpenseType={selectedExpenseType}
+                    onExpenseTypeChange={setSelectedExpenseType}
+                    billFilter={billFilter}
+                    onBillFilterChange={setBillFilter}
                 />
                 <div style={{ overflow: 'auto', flex: 1 }}>
                     <table className="table" style={{ width: '100%', fontSize: '18px', borderCollapse: 'separate', borderSpacing: 0 }}>
@@ -184,17 +195,19 @@ export const ExpensesTable: React.FC<ExpensesTableProps> = ({ onExpenseClick, da
                                         />
                                     </td>
                                     <td>{expense.date || '-'}</td>
-                                    <td>
-                                        <input
-                                            type="checkbox"
-                                            checked={expense.is_cash || false}
-                                            onChange={(e) =>
-                                                updateCash.mutate({
-                                                    id: expense.id,
-                                                    isCash: e.target.checked,
-                                                })
-                                            }
-                                        />
+                                    <td
+                                        onClick={() => updateCash.mutate({ id: expense.id, isCash: !expense.is_cash })}
+                                        style={{
+                                            textAlign: 'center',
+                                            fontSize: '18px',
+                                            color: expense.is_cash ? '#2e7d32' : '#ccc',
+                                            fontWeight: 'bold',
+                                            cursor: 'pointer',
+                                            userSelect: 'none',
+                                        }}
+                                        title={expense.is_cash ? 'Cash expense - click to unmark' : 'Click to mark as cash'}
+                                    >
+                                        {expense.is_cash ? '✓' : '-'}
                                     </td>
                                     <td style={{ textAlign: 'center' }}>
                                         <button

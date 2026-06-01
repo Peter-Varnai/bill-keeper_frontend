@@ -4,6 +4,8 @@ import type { Expense } from '../api/types';
 export interface ExpenseFilterState {
     searchName: string;
     selectedMonth: number | null;
+    selectedExpenseType: number | null;
+    billFilter: 'all' | 'yes' | 'no';
 }
 
 export const useExpenseFilter = (expenses: Expense[] | undefined, filter: ExpenseFilterState) => {
@@ -29,6 +31,25 @@ export const useExpenseFilter = (expenses: Expense[] | undefined, filter: Expens
             });
         }
 
+        // Filter by expense type
+        if (filter.selectedExpenseType !== null) {
+            filtered = filtered.filter(expense =>
+                expense.expense_type === filter.selectedExpenseType
+            );
+        }
+
+        // Filter by bill status
+        if (filter.billFilter !== 'all') {
+            filtered = filtered.filter(expense => {
+                const hasBill = expense.bill !== null && expense.bill !== 0;
+                if (filter.billFilter === 'yes') {
+                    return hasBill;
+                } else {
+                    return !hasBill;
+                }
+            });
+        }
+
         return filtered;
-    }, [expenses, filter.searchName, filter.selectedMonth]);
+    }, [expenses, filter.searchName, filter.selectedMonth, filter.selectedExpenseType, filter.billFilter]);
 };

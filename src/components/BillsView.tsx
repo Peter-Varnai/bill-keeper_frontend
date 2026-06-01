@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useBills, useUpdateBill, useDeleteBill } from '../hooks/useBills';
+import { useExpenses } from '../hooks/useExpenses';
 import { Window, Button, Dialog } from './windows98';
 import { getImageUrl } from '../api/client';
 import { BillExpensesTable } from './BillExpensesTable';
+import { BillSearch } from './BillSearch';
 import type { Bill } from '../api/types';
 
 interface BillsViewProps {
@@ -11,17 +13,35 @@ interface BillsViewProps {
 
 export const BillsView: React.FC<BillsViewProps> = ({ dataGroupId }) => {
     const { data: bills, isLoading, error } = useBills(dataGroupId);
+    const { data: expenses } = useExpenses(dataGroupId);
     const updateBill = useUpdateBill(dataGroupId);
     const deleteBill = useDeleteBill(dataGroupId);
     const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
     const [amount, setAmount] = useState<string>('');
     const [date, setDate] = useState<string>('');
+    const [isCash, setIsCash] = useState(false);
     const [billToDelete, setBillToDelete] = useState<Bill | null>(null);
+    const [amountFilter, setAmountFilter] = useState('');
+
+    const filteredBills = useMemo(() => {
+        if (!amountFilter.trim()) return bills;
+        return bills?.filter(bill =>
+            bill.amount !== null && bill.amount !== undefined &&
+            bill.amount.toString().toLowerCase().includes(amountFilter.toLowerCase())
+        );
+    }, [bills, amountFilter]);
+
+    const linkedBillIds = useMemo(() => {
+        return new Set(
+            expenses?.map(e => e.bill).filter((b): b is number => b !== null) || []
+        );
+    }, [expenses]);
 
     useEffect(() => {
         setSelectedBill(null);
         setAmount('');
         setDate('');
+        setIsCash(false);
     }, [dataGroupId]);
 
     useEffect(() => {
@@ -30,6 +50,7 @@ export const BillsView: React.FC<BillsViewProps> = ({ dataGroupId }) => {
             setSelectedBill(firstBill);
             setAmount(firstBill.amount?.toString() || '');
             setDate(firstBill.date || '');
+            setIsCash(firstBill.is_cash ?? false);
         }
     }, [bills, selectedBill]);
 
@@ -37,6 +58,7 @@ export const BillsView: React.FC<BillsViewProps> = ({ dataGroupId }) => {
         if (selectedBill) {
             setAmount(selectedBill.amount?.toString() || '');
             setDate(selectedBill.date || '');
+            setIsCash(selectedBill.is_cash ?? false);
         }
     }, [selectedBill]);
 
@@ -52,6 +74,7 @@ export const BillsView: React.FC<BillsViewProps> = ({ dataGroupId }) => {
                     filename: selectedBill.filename,
                     amount: amount ? parseFloat(amount) : null,
                     date: date || null,
+                    is_cash: isCash,
                 },
             });
         }
@@ -100,84 +123,91 @@ export const BillsView: React.FC<BillsViewProps> = ({ dataGroupId }) => {
                         flexDirection: 'column',
                         gap: '8px'
                     }}>
-                        {bills?.map((bill) => (
-                            <div
-                                key={bill.id}
-                                onClick={() => handleBillSelect(bill)}
-                                style={{
-                                    display: 'flex',
-                                    gap: '8px',
-                                    padding: '8px',
-                                    backgroundColor: selectedBill?.id === bill.id ? '#d4d0c8' : '#c0c0c0',
-                                    border: selectedBill?.id === bill.id ? '2px inset #808080' : '2px outset #fff',
-                                    cursor: 'pointer',
-                                    alignItems: 'center',
-                                }}
-                            >
-                                <div style={{ flexShrink: 0 }}>
-                                    {bill.filename ? (
-                                        <img
-                                            src={getImageUrl(bill.filename, dataGroupId)}
-                                            alt={`Bill ${bill.id}`}
-                                            style={{
-                                                maxWidth: '50px',
-                                                maxHeight: '100px',
-                                                border: '1px solid #808080',
-                                                backgroundColor: '#fff'
-                                            }}
-                                            onError={(e) => {
-                                                (e.target as HTMLImageElement).style.display = 'none';
-                                            }}
-                                        />
-                                    ) : (
-                                        <div
-                                            style={{
-                                                width: '50px',
-                                                height: '100px',
-                                                backgroundColor: '#e0e0e0',
-                                                border: '1px solid #808080',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                fontSize: '8px',
-                                                color: '#666',
-                                            }}
-                                        >
-                                            No Img
-                                        </div>
-                                    )}
-                                </div>
-                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                    <div style={{ fontWeight: 'bold', fontSize: '12px' }}>
-                                        Bill #{bill.id}
-                                    </div>
-                                    <div style={{ fontSize: '11px' }}>
-                                        {bill.amount !== null && bill.amount !== undefined
-                                            ? `€ ${bill.amount.toFixed(2)}`
-                                            : '--'}
-                                    </div>
-                                    <div style={{ fontSize: '10px', color: '#666' }}>
-                                        {bill.filename || 'No filename'}
-                                    </div>
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center' }}>
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); setBillToDelete(bill); }}
-                                        style={{
-                                            background: 'none',
-                                            border: 'none',
-                                            cursor: 'pointer',
-                                            fontSize: '16px',
-                                            padding: '4px',
-                                        }}
-                                        title="Delete bill"
-                                        className='delete-expense-button'
-                                    >
-                                        🗑️
-                                    </button>
-                                </div>
+                        <BillSearch amountFilter={amountFilter} onAmountChange={setAmountFilter} />
+                        {filteredBills && filteredBills.length === 0 ? (
+                            <div style={{ padding: '8px', textAlign: 'center', color: '#666', fontSize: '12px' }}>
+                                No bills found
                             </div>
-                        ))}
+                        ) : (
+                            filteredBills?.map((bill) => (
+                                <div
+                                    key={bill.id}
+                                    onClick={() => handleBillSelect(bill)}
+                                    style={{
+                                        display: 'flex',
+                                        gap: '8px',
+                                        padding: '8px',
+                                        backgroundColor: linkedBillIds.has(bill.id) ? '#90EE90' : (selectedBill?.id === bill.id ? '#d4d0c8' : '#c0c0c0'),
+                                        border: selectedBill?.id === bill.id ? '2px inset #808080' : '2px outset #fff',
+                                        cursor: 'pointer',
+                                        alignItems: 'center',
+                                    }}
+                                >
+                                    <div style={{ flexShrink: 0 }}>
+                                        {bill.filename ? (
+                                            <img
+                                                src={getImageUrl(bill.filename, dataGroupId)}
+                                                alt={`Bill ${bill.id}`}
+                                                style={{
+                                                    maxWidth: '50px',
+                                                    maxHeight: '100px',
+                                                    border: '1px solid #808080',
+                                                    backgroundColor: '#fff'
+                                                }}
+                                                onError={(e) => {
+                                                    (e.target as HTMLImageElement).style.display = 'none';
+                                                }}
+                                            />
+                                        ) : (
+                                            <div
+                                                style={{
+                                                    width: '50px',
+                                                    height: '100px',
+                                                    backgroundColor: '#e0e0e0',
+                                                    border: '1px solid #808080',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    fontSize: '8px',
+                                                    color: '#666',
+                                                }}
+                                            >
+                                                No Img
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                        <div style={{ fontWeight: 'bold', fontSize: '12px' }}>
+                                            Bill #{bill.id}
+                                        </div>
+                                        <div style={{ fontSize: '11px' }}>
+                                            {bill.amount !== null && bill.amount !== undefined
+                                                ? `€ ${bill.amount.toFixed(2)}`
+                                                : '--'}
+                                        </div>
+                                        <div style={{ fontSize: '10px', color: '#666' }}>
+                                            {bill.filename || 'No filename'}
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setBillToDelete(bill); }}
+                                            style={{
+                                                background: 'none',
+                                                border: 'none',
+                                                cursor: 'pointer',
+                                                fontSize: '16px',
+                                                padding: '4px',
+                                            }}
+                                            title="Delete bill"
+                                            className='delete-expense-button'
+                                        >
+                                            🗑️
+                                        </button>
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </div>
                 </Window>
             </div>
@@ -252,6 +282,19 @@ export const BillsView: React.FC<BillsViewProps> = ({ dataGroupId }) => {
                                                 backgroundColor: '#fff',
                                             }}
                                         />
+                                    </div>
+
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <input
+                                            id="cash-checkbox"
+                                            type="checkbox"
+                                            checked={isCash}
+                                            onChange={(e) => setIsCash(e.target.checked)}
+                                            style={{ width: '16px', height: '16px' }}
+                                        />
+                                        <label htmlFor="cash-checkbox" style={{ fontWeight: 'bold', cursor: 'pointer' }}>
+                                            Cash (Bargeld)
+                                        </label>
                                     </div>
 
                                     <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
