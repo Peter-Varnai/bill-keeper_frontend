@@ -30,6 +30,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
     const [mandatoryTab, setMandatoryTab] = useState<'ear' | 'assets'>('ear');
     const [earExpanded, setEarExpanded] = useState(false);
     const [earViewMode, setEarViewMode] = useState<'report' | 'belegsammlung'>('report');
+    const [belegLoading, setBelegLoading] = useState(false);
+    const [belegProgress, setBelegProgress] = useState({ loaded: 0, total: 0 });
+    const loadedImagesRef = useRef(0);
 
     // Edit/Create modal state
     const [showEditModal, setShowEditModal] = useState(false);
@@ -67,11 +70,26 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
         }
     }, [activeReportAppId, activeReportType, dataGroupId]);
 
+    React.useEffect(() => {
+        if (!belegLoading) return;
+        const timer = setTimeout(() => {
+            setBelegLoading(false);
+            handleEarBelegPrint();
+        }, 30000);
+        return () => clearTimeout(timer);
+    }, [belegLoading]);
+
     const reportRef = useRef<HTMLDivElement>(null);
+    const earBelegRef = useRef<HTMLDivElement>(null);
 
     const handlePrint = useReactToPrint({
         contentRef: reportRef,
         documentTitle: `${activeReportAppId || 'ear'}_report`,
+    });
+
+    const handleEarBelegPrint = useReactToPrint({
+        contentRef: earBelegRef,
+        documentTitle: 'ear_belegsammlung',
     });
 
     const handleViewEar = () => {
@@ -100,9 +118,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
         setActiveReportType('ear');
         setActiveReportAppId(null);
         setEarViewMode('belegsammlung');
-        setTimeout(() => {
-            handlePrint();
-        }, 100);
+        setBelegLoading(true);
+        setBelegProgress({ loaded: 0, total: 0 });
+        loadedImagesRef.current = 0;
+    };
+
+    const trackImageLoad = (total: number) => {
+        loadedImagesRef.current += 1;
+        const loaded = loadedImagesRef.current;
+        setBelegProgress({ loaded, total });
+        if (loaded >= total) {
+            setBelegLoading(false);
+            handleEarBelegPrint();
+        }
     };
 
     const handleExportEarCsv = () => {
@@ -220,7 +248,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
 
     const getEarBelegsammlungData = (): ReportItem[] => {
         if (!earQuery.data || !bills) return [];
-        return earQuery.data.expenses.map(expense => {
+        return earQuery.data.expenses.filter(e => e.expense_type < 50 && Number(e.amount) < 0).sort((a, b) => {
+            if (!a.date && !b.date) return 0;
+            if (!a.date) return 1;
+            if (!b.date) return -1;
+            return a.date!.localeCompare(b.date!);
+        }).map(expense => {
             const matchedBill = expense.bill ? bills.find(b => b.id === expense.bill) : undefined;
             return {
                 expense_id: expense.id,
@@ -256,10 +289,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
 
         if ('expenses' in data) {
             const { expenses, totals } = data;
+            const sorted = [...expenses].sort((a, b) => {
+                if (!a.date && !b.date) return 0;
+                if (!a.date) return 1;
+                if (!b.date) return -1;
+                return a.date.localeCompare(b.date);
+            });
             const ITEMS_PER_PAGE = 48;
             const pages: Expense[][] = [];
-            for (let i = 0; i < expenses.length; i += ITEMS_PER_PAGE) {
-                pages.push(expenses.slice(i, i + ITEMS_PER_PAGE));
+            for (let i = 0; i < sorted.length; i += ITEMS_PER_PAGE) {
+                pages.push(sorted.slice(i, i + ITEMS_PER_PAGE));
             }
 
             return (
@@ -624,7 +663,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
                         title={`${currentReportTitle} Report`}
                         style={{ height: '100%' }}
                     >
-                        <div style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
+                        <div style={{ padding: '8px', height: '100%', overflow: 'auto', position: 'relative' }}>
                             {isLoadingReport ? (
                                 <div style={{ padding: '16px', textAlign: 'center' }}>Loading report...</div>
                             ) : (
@@ -716,8 +755,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
                                 ) : activeReportType === 'ear' && earViewMode === 'belegsammlung' ? (
                                     (() => {
                                         const earBelegData = getEarBelegsammlungData();
+                                        const imageCount = earBelegData.filter(d => d.filename).length;
                                         return (
-                                            <div ref={reportRef}>
+                                            <div ref={earBelegRef}>
                                                 <style>{`
                                                     @media print {
                                                         .ear-belegsammlung-page {
@@ -741,7 +781,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
                                                                         src={getImageUrl(item.filename, dataGroupId)}
                                                                         alt={`Expense ${item.expense_id}`}
                                                                         style={{ maxWidth: '100%', maxHeight: '250mm', border: '1px solid #ccc' }}
-                                                                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                                                        onLoad={() => trackImageLoad(imageCount)}
+                                                                        onError={(e) => {
+                                                                            (e.target as HTMLImageElement).style.display = 'none';
+                                                                            trackImageLoad(imageCount);
+                                                                        }}
                                                                     />
                                                                 ) : (
                                                                     <div style={{ width: '100%', height: '200px', backgroundColor: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -752,7 +796,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
                                                             <div style={{ width: '27%' }}>
                                                                 <table className="table" style={{ width: '100%', fontSize: '11px' }}>
                                                                     <tbody>
-                                                                        <tr><td>No. {item.bill_id ? `Bill #${item.bill_id}` : 'No Bill'}</td></tr>
                                                                         <tr><td style={{ fontWeight: 'bold' }}>€ {item.amount}</td></tr>
                                                                         <tr><td>{item.expense_type_name || 'Unknown'}</td></tr>
                                                                         <tr><td>{item.partner}</td></tr>
@@ -775,6 +818,32 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
                                         currentReportTitle
                                     )
                                 )
+                            )}
+
+                            {belegLoading && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    backgroundColor: 'rgba(0,0,0,0.3)',
+                                    zIndex: 1000,
+                                }}>
+                                    <Window title="Loading Belegsammlung">
+                                        <div style={{ padding: '16px', minWidth: '250px', textAlign: 'center' }}>
+                                            <div style={{ fontSize: '14px', marginBottom: '8px' }}>
+                                                Loading scanned bills...
+                                            </div>
+                                            <div style={{ fontSize: '13px', color: '#000080' }}>
+                                                {belegProgress.loaded} / {belegProgress.total} images loaded
+                                            </div>
+                                        </div>
+                                    </Window>
+                                </div>
                             )}
                         </div>
                     </Window>
