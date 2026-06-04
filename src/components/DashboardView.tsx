@@ -29,6 +29,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
     const [expandedSummary, setExpandedSummary] = useState<number | null>(null);
     const [mandatoryTab, setMandatoryTab] = useState<'ear' | 'assets'>('ear');
     const [earExpanded, setEarExpanded] = useState(false);
+    const [earViewMode, setEarViewMode] = useState<'report' | 'belegsammlung'>('report');
 
     // Edit/Create modal state
     const [showEditModal, setShowEditModal] = useState(false);
@@ -80,7 +81,28 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
         } else {
             setActiveReportType('ear');
             setActiveReportAppId(null);
+            setEarViewMode('report');
         }
+    };
+
+    const handleViewEarBelegsammlung = () => {
+        if (activeReportType === 'ear' && earViewMode === 'belegsammlung') {
+            setActiveReportType(null);
+            setActiveReportAppId(null);
+        } else {
+            setActiveReportType('ear');
+            setActiveReportAppId(null);
+            setEarViewMode('belegsammlung');
+        }
+    };
+
+    const handlePrintEarBelegsammlung = () => {
+        setActiveReportType('ear');
+        setActiveReportAppId(null);
+        setEarViewMode('belegsammlung');
+        setTimeout(() => {
+            handlePrint();
+        }, 100);
     };
 
     const handleExportEarCsv = () => {
@@ -194,6 +216,26 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
             .sort((a, b) => parseFloat(b[1]) - parseFloat(a[1]));
 
         return { incomes, expenses: expensesArr };
+    };
+
+    const getEarBelegsammlungData = (): ReportItem[] => {
+        if (!earQuery.data || !bills) return [];
+        return earQuery.data.expenses.map(expense => {
+            const matchedBill = expense.bill ? bills.find(b => b.id === expense.bill) : undefined;
+            return {
+                expense_id: expense.id,
+                partner: expense.partner,
+                amount: String(Math.abs(Number(expense.amount))),
+                date: expense.date || '',
+                expense_type: expense.expense_type,
+                expense_type_name: EXPENSE_TYPES[expense.expense_type] || 'Unknown',
+                is_cash: expense.is_cash,
+                bill_filename: matchedBill?.filename || null,
+                bill_date: matchedBill?.date || null,
+                bill_id: matchedBill?.id ?? null,
+                filename: matchedBill?.filename || '',
+            };
+        });
     };
 
     // Modal handlers
@@ -473,6 +515,32 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
                                                 >
                                                     Export CSV
                                                 </button>
+                                                <button
+                                                    onClick={handleViewEarBelegsammlung}
+                                                    style={{
+                                                        padding: '6px 12px',
+                                                        fontSize: '12px',
+                                                        backgroundColor: activeReportType === 'ear' && earViewMode === 'belegsammlung' ? '#d4d0c8' : '#c0c0c0',
+                                                        border: '2px outset #fff',
+                                                        cursor: 'pointer',
+                                                        minWidth: '100px',
+                                                    }}
+                                                >
+                                                    {activeReportType === 'ear' && earViewMode === 'belegsammlung' ? '✓ View Belegsammlung' : 'View Belegsammlung'}
+                                                </button>
+                                                <button
+                                                    onClick={handlePrintEarBelegsammlung}
+                                                    style={{
+                                                        padding: '6px 12px',
+                                                        fontSize: '12px',
+                                                        backgroundColor: '#c0c0c0',
+                                                        border: '2px outset #fff',
+                                                        cursor: 'pointer',
+                                                        minWidth: '100px',
+                                                    }}
+                                                >
+                                                    Print Belegsammlung
+                                                </button>
                                             </div>
                                         </div>
 
@@ -645,6 +713,62 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dataGroupId }) => 
                                             })}
                                         </div>
                                     )
+                                ) : activeReportType === 'ear' && earViewMode === 'belegsammlung' ? (
+                                    (() => {
+                                        const earBelegData = getEarBelegsammlungData();
+                                        return (
+                                            <div ref={reportRef}>
+                                                <style>{`
+                                                    @media print {
+                                                        .ear-belegsammlung-page {
+                                                            page-break-after: always;
+                                                            width: 210mm;
+                                                            min-height: 297mm;
+                                                            padding: 14mm;
+                                                            box-sizing: border-box;
+                                                        }
+                                                        .ear-belegsammlung-page:last-child {
+                                                            page-break-after: auto;
+                                                        }
+                                                    }
+                                                `}</style>
+                                                {earBelegData.map((item, index) => (
+                                                    <div key={item.expense_id} className="ear-belegsammlung-page" style={{ marginBottom: '20px' }}>
+                                                        <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+                                                            <div style={{ flex: 1 }}>
+                                                                {item.filename ? (
+                                                                    <img
+                                                                        src={getImageUrl(item.filename, dataGroupId)}
+                                                                        alt={`Expense ${item.expense_id}`}
+                                                                        style={{ maxWidth: '100%', maxHeight: '250mm', border: '1px solid #ccc' }}
+                                                                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                                                    />
+                                                                ) : (
+                                                                    <div style={{ width: '100%', height: '200px', backgroundColor: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                        No Image
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div style={{ width: '27%' }}>
+                                                                <table className="table" style={{ width: '100%', fontSize: '11px' }}>
+                                                                    <tbody>
+                                                                        <tr><td>No. {item.bill_id ? `Bill #${item.bill_id}` : 'No Bill'}</td></tr>
+                                                                        <tr><td style={{ fontWeight: 'bold' }}>€ {item.amount}</td></tr>
+                                                                        <tr><td>{item.expense_type_name || 'Unknown'}</td></tr>
+                                                                        <tr><td>{item.partner}</td></tr>
+                                                                        <tr><td>{item.date || '-'}</td></tr>
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                        <div style={{ textAlign: 'right', marginTop: '10px', fontSize: '10px' }}>
+                                                            Seite {index + 1} von {earBelegData.length} - EAR Belegsammlung
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        );
+                                    })()
                                 ) : (
                                     renderReportContent(
                                         activeReportType === 'ear' ? earQuery.data : reportData || [],
