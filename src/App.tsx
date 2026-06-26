@@ -9,6 +9,8 @@ import { AddExpenseModal } from './components/AddExpenseModal';
 import { UploadBillsModal } from './components/UploadBillsModal';
 import { Dialog } from './components/windows98';
 import { useDataGroups, useCreateDataGroup, useDeleteDataGroup } from './hooks/useDataGroups';
+import { Protected } from './auth/Protected';
+import { useAuth } from './auth/AuthContext';
 import '98.css';
 import './styles/overrides.css';
 
@@ -30,6 +32,7 @@ const AppContent: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
   const [showUploadBillsModal, setShowUploadBillsModal] = useState(false);
+  const { logout } = useAuth();
   
   // Load last used data group from localStorage, default to null
   const [selectedDataGroup, setSelectedDataGroup] = useState<number | null>(() => {
@@ -189,6 +192,19 @@ const AppContent: React.FC = () => {
           </button>
         </React.Fragment>
       ))}
+      <div style={{ flex: 1 }} />
+      <button
+        onClick={logout}
+        style={{
+          padding: '8px 16px',
+          fontSize: '14px',
+          backgroundColor: '#c0c0c0',
+          border: '2px outset #fff',
+          cursor: 'pointer',
+        }}
+      >
+        Logout
+      </button>
     </div>
   );
 
@@ -273,7 +289,9 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <AppContent />
+      <Protected>
+        <AppContent />
+      </Protected>
     </QueryClientProvider>
   );
 };

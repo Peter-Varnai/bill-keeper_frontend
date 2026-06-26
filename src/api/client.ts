@@ -3,6 +3,8 @@ import type { Bill, Expense, Summary, EarResponse, DataGroup, ApplicationReport,
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
+const TOKEN_KEY = 'auth_token';
+
 export const apiClient = axios.create({
     baseURL: API_BASE_URL,
     headers: {
@@ -10,13 +12,15 @@ export const apiClient = axios.create({
     },
 });
 
-// Request logging interceptor
 apiClient.interceptors.request.use((config) => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
     console.log(`[REQUEST] ${config.method?.toUpperCase()} ${config.url}`, config.data);
     return config;
 });
 
-// Response logging interceptor
 apiClient.interceptors.response.use(
     (response) => {
         console.log(`[RESPONSE] ${response.status} ${response.config.url}`, response.data);
