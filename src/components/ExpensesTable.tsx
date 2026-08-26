@@ -147,7 +147,7 @@ export const ExpensesTable: React.FC<ExpensesTableProps> = ({ onExpenseClick, da
                                     }}>
                                     <td style={{
                                         color: parseFloat(String(expense.amount)) > 0 ? '#2e7d32' :
-                                            expense.bill === 0 && parseFloat(String(expense.amount)) < 0 ? '#f57c00' : undefined,
+                                            expense.bill === null && parseFloat(String(expense.amount)) < 0 ? '#f57c00' : undefined,
                                     }}>{expense.partner}</td>
                                     <td style={{ fontWeight: 'bold' }}>
                                         {parseFloat(String(expense.amount)) > 0 ? '+' : ''}€ {parseFloat(String(expense.amount)).toFixed(2)}
@@ -155,11 +155,11 @@ export const ExpensesTable: React.FC<ExpensesTableProps> = ({ onExpenseClick, da
                                     <td>
                                         <input
                                             type="number"
-                                            value={expense.bill === null || expense.bill === 0 ? "" : expense.bill}
+                                            value={expense.bill === null ? "" : expense.bill}
                                             onChange={(e) =>
                                                 updateBill.mutate({
                                                     id: expense.id,
-                                                    billNumber: Number(e.target.value),
+                                                    billNumber: Number(e.target.value) || null,
                                                 })
                                             }
                                             style={{ width: '60px', fontSize: '13px' }}

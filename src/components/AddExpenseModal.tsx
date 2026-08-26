@@ -114,7 +114,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
     amount: '',
     date: '',
     expense_type: 0,
-    bill: 0,
+    bill: null as number | null,
     application: 0,
     is_cash: false,
   });
@@ -158,7 +158,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
         amount: '',
         date: '',
         expense_type: 0,
-        bill: 0,
+        bill: null as number | null,
         application: 0,
         is_cash: false,
       });
@@ -278,7 +278,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
         amount: manualForm.amount,
         date: manualForm.date || undefined,
         expense_type: manualForm.expense_type || undefined,
-        bill: manualForm.bill || undefined,
+        bill: manualForm.bill ?? undefined,
         application: manualForm.application || undefined,
         is_cash: manualForm.is_cash || undefined,
       });
@@ -516,8 +516,8 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
           <label style={{ width: '100px', fontSize: '12px' }}>Bill #:</label>
           <input
             type="number"
-            value={manualForm.bill}
-            onChange={(e) => setManualForm({ ...manualForm, bill: parseInt(e.target.value) || 0 })}
+            value={manualForm.bill ?? ''}
+            onChange={(e) => setManualForm({ ...manualForm, bill: parseInt(e.target.value) || null })}
             style={{
               flex: 1,
               padding: '4px 8px',

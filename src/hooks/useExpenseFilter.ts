@@ -41,7 +41,7 @@ export const useExpenseFilter = (expenses: Expense[] | undefined, filter: Expens
         // Filter by bill status
         if (filter.billFilter !== 'all') {
             filtered = filtered.filter(expense => {
-                const hasBill = expense.bill !== null && expense.bill !== 0;
+                const hasBill = expense.bill !== null;
                 if (filter.billFilter === 'yes') {
                     return hasBill;
                 } else {

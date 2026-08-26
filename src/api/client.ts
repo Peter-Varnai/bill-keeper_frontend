@@ -80,7 +80,7 @@ export const uploadBills = (
 export const getExpenses = (dataGroup: number): Promise<Expense[]> =>
     apiClient.get(`/expenses?data_group=${dataGroup}`).then((res) => res.data);
 
-export const updateExpenseBill = (id: number, billNumber: number, dataGroup: number): Promise<void> =>
+export const updateExpenseBill = (id: number, billNumber: number | null, dataGroup: number): Promise<void> =>
     apiClient.patch(`/expenses/${id}/bill?data_group=${dataGroup}`, { expense_id: id, new_number: billNumber }).then((res) => res.data);
 
 export const updateExpenseType = (id: number, typeId: number, dataGroup: number): Promise<void> =>

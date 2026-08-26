@@ -16,7 +16,7 @@ export const useUpdateExpenseBill = (groupId: number) => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: ({ id, billNumber }: { id: number; billNumber: number }) =>
+        mutationFn: ({ id, billNumber }: { id: number; billNumber: number | null }) =>
             updateExpenseBill(id, billNumber, groupId),
         onMutate: async ({ id, billNumber }) => {
             // Cancel outgoing refetches
