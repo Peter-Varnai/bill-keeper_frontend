@@ -18,7 +18,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - name: Lint (non-blocking)
-        run: npm run lint || true
+        run: npm run lint 
       - uses: actions/upload-artifact@v4
         with:
           name: frontend-dist
@@ -53,4 +53,4 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
-            sudo -n systemctl reload nginx || true
+            sudo -n systemctl reload nginx 
