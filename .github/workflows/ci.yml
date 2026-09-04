@@ -18,7 +18,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - name: Lint (non-blocking)
-        run: npm run lint 
+        run: npm run lint || true
       - uses: actions/upload-artifact@v4
         with:
           name: frontend-dist
