@@ -151,8 +151,9 @@ The app uses Windows 98 aesthetic with:
 
 ### Development Commands
 ```bash
-npm run dev       # Start dev server (port 5173)
-npm run build     # Type-check (tsc -b) + build (vite build)
-npm run lint      # Run ESLint
-npm run preview   # Preview production build
+bun install       # Install dependencies (uses bun.lock)
+bun run dev       # Start dev server (port 5173)
+bun run build     # Type-check (tsc -b) + build (vite build)
+bun run lint      # Run ESLint
+bun run preview   # Preview production build
 ```
